@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Menu from "./pages/Menu";
 import Tickets from "./pages/Tickets"; 
 import Profile  from "./pages/Profile";
+import Register from "./pages/Register";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/tickets" element={<Tickets />} /> 
         <Route path="/profile" element={<Profile />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </Router>
   );

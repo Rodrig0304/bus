@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import logo from "../images/logo.PNG";
 
 export default function Menu() {
   const [departureDate, setDepartureDate] = useState(null); // Fecha de salida
@@ -10,6 +11,20 @@ export default function Menu() {
   const [destination, setDestination] = useState(""); // Destino
   const [isLoading, setIsLoading] = useState(false); // Estado para la animación de carga
   const [searchResults, setSearchResults] = useState([]); // Resultados de búsqueda
+  const [selectedTrip, setSelectedTrip] = useState(null); // Viaje seleccionado
+  const [selectedSeat, setSelectedSeat] = useState(null); // Asiento seleccionado
+  const [passengerName, setPassengerName] = useState(""); // Nombre del pasajero
+  const [useLoggedInUser, setUseLoggedInUser] = useState(true); // Usar el nombre del usuario logueado
+  const [loggedInUserName] = useState("Rodrigo Vega"); // Nombre del usuario logueado
+  const [cardRegistered, setCardRegistered] = useState(false); // Si hay tarjeta registrada
+  const [cardDetails, setCardDetails] = useState({
+    number: "",
+    name: "",
+    expiry: "",
+    cvv: "",
+  });
+
+  const resultsRef = useRef(null);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -31,6 +46,9 @@ export default function Menu() {
           seatsAvailable: 10,
           priceTaquilla: "$500",
           priceOnline: "$450",
+          seats: Array(40)
+            .fill(false)
+            .map((_, i) => (i % 5 === 0 ? true : false)), // Simulación de asientos ocupados
         },
         {
           id: 2,
@@ -40,145 +58,468 @@ export default function Menu() {
           seatsAvailable: 5,
           priceTaquilla: "$550",
           priceOnline: "$500",
+          seats: Array(40)
+            .fill(false)
+            .map((_, i) => (i % 6 === 0 ? true : false)), // Simulación de asientos ocupados
         },
       ]);
+
+      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 2000);
   };
 
-  const handleBuy = (id) => {
-    alert(`Has comprado el boleto con ID: ${id}`);
+  const handleSelectTrip = (trip) => {
+    setSelectedTrip(trip);
+  };
+
+  const handleSelectSeat = (seatIndex) => {
+    setSelectedSeat(seatIndex);
+  };
+
+  const handleRegisterCard = (e) => {
+    e.preventDefault();
+
+    // Validar número de tarjeta (16 dígitos)
+    const cardNumber = cardDetails.number.replace(/-/g, "");
+    if (!/^\d{16}$/.test(cardNumber)) {
+      alert("El número de tarjeta debe tener exactamente 16 dígitos.");
+      return;
+    }
+
+    // Validar fecha de expiración (MM/AA)
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardDetails.expiry)) {
+      alert("La fecha de expiración debe estar en el formato MM/AA.");
+      return;
+    }
+
+    // Validar CVV (3 dígitos)
+    if (!/^\d{3}$/.test(cardDetails.cvv)) {
+      alert("El CVV debe tener exactamente 3 dígitos.");
+      return;
+    }
+
+    setCardRegistered(true);
+    alert("Tarjeta registrada con éxito.");
+  };
+
+  const handleCardNumberChange = (e) => {
+    const input = e.target.value.replace(/-/g, "");
+    if (/^\d*$/.test(input) && input.length <= 16) {
+      const formatted = input.match(/.{1,4}/g)?.join("-") || "";
+      setCardDetails({ ...cardDetails, number: formatted });
+    }
+  };
+
+  const handleExpiryChange = (e) => {
+    const input = e.target.value.replace(/\//g, "");
+    if (/^\d*$/.test(input) && input.length <= 4) {
+      const formatted =
+        input.length > 2 ? `${input.slice(0, 2)}/${input.slice(2)}` : input;
+      setCardDetails({ ...cardDetails, expiry: formatted });
+    }
+  };
+
+  const handleCVVChange = (e) => {
+    const input = e.target.value;
+    if (/^\d*$/.test(input) && input.length <= 3) {
+      setCardDetails({ ...cardDetails, cvv: input });
+    }
+  };
+
+  const handleConfirmTicket = () => {
+    if (!cardRegistered) {
+      alert("Por favor, registra una tarjeta antes de confirmar la compra.");
+      return;
+    }
+
+    const finalPassengerName = useLoggedInUser
+      ? loggedInUserName
+      : passengerName;
+
+    alert(
+      `Boleto confirmado para ${finalPassengerName} en el asiento ${
+        selectedSeat + 1
+      }.`
+    );
+
+    //no me funciono pendiente de revisarr Limpiar formulario y datos
+    setSelectedTrip(null); // Limpiar el viaje seleccionado
+    setSelectedSeat(null); // Limpiar el asiento seleccionado
+    setPassengerName(""); // Limpiar el nombre del pasajero
+    setCardDetails({ number: "", name: "", expiry: "", cvv: "" }); // Limpiar los detalles de la tarjeta
+    setCardRegistered(false); // Restablecer el estado de la tarjeta
   };
 
   return (
-    <div className="min-h-screen pb-16 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700">
-      <header className="flex items-center justify-between p-4 bg-white shadow-md">
-        <h1 className="text-2xl font-bold text-blue-700">Roy Viajero</h1>
+    <div className="flex flex-col min-h-screen bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700">
+      <header className="flex items-center justify-between w-full p-4 bg-white shadow-md">
+        <div className="flex items-center">
+          <img src={logo} alt="Logo" className="h-10 mr-2" />
+          <h1 className="text-2xl font-bold text-blue-700">Roy Viajero</h1>
+        </div>
       </header>
 
-      <main className="p-8">
-        <h2 className="mb-6 text-3xl font-bold text-white">Buscar Viajes</h2>
-        <div className="w-full max-w-2xl p-6 bg-white rounded-lg shadow-lg">
-          <form onSubmit={handleSearch}>
-            <div className="mb-4">
-              <label className="block mb-2 text-gray-700">
-                ¿De dónde sales?
-              </label>
-              <input
-                type="text"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                placeholder="Ingresa tu lugar de salida"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block mb-2 text-gray-700">
-                ¿A dónde viajas?
-              </label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                placeholder="Ingresa tu destino"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block mb-2 text-gray-700">
-                ¿Cuándo viajas?
-              </label>
-              <div className="flex flex-wrap gap-4">
-                <button
-                  type="button"
-                  className="flex-1 px-4 py-2 text-center bg-gray-200 rounded-lg"
-                  onClick={() => setDepartureDate(new Date())}
-                >
-                  Hoy
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 px-4 py-2 text-center bg-gray-200 rounded-lg"
-                  onClick={() =>
-                    setDepartureDate(new Date(Date.now() + 86400000))
-                  }
-                >
-                  Mañana
-                </button>
-                <DatePicker
-                  selected={departureDate}
-                  onChange={(date) => setDepartureDate(date)}
-                  placeholderText="Elegir fecha"
-                  className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+      <main className="flex-1 w-full max-w-2xl p-6 mx-auto mt-4 mb-16 overflow-y-auto bg-white rounded-lg shadow-lg">
+        {!selectedTrip ? (
+          <>
+            <h2 className="mb-6 text-3xl font-bold text-center text-blue-700">
+              Buscar Viajes
+            </h2>
+            <form onSubmit={handleSearch}>
+              <div className="mb-4">
+                <label className="block mb-2 text-gray-700">
+                  ¿De dónde sales?
+                </label>
+                <input
+                  type="text"
+                  value={origin}
+                  onChange={(e) => setOrigin(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="Ingresa tu lugar de salida"
                 />
               </div>
-            </div>
 
-            <div className="mb-4">
-              <label className="block mb-2 text-gray-700">
-                ¿Cuándo regresas? (opcional)
-              </label>
-              <DatePicker
-                selected={returnDate}
-                onChange={(date) => setReturnDate(date)}
-                placeholderText="Elegir fecha"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
-            </div>
+              <div className="mb-4">
+                <label className="block mb-2 text-gray-700">
+                  ¿A dónde viajas?
+                </label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  placeholder="Ingresa tu destino"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
-            >
-              Buscar viajes
-            </button>
-          </form>
-        </div>
-
-        {isLoading && (
-          <div className="mt-6 text-center text-white">
-            <i className="text-4xl fas fa-spinner fa-spin"></i>
-            <p className="mt-2">Buscando viajes...</p>
-          </div>
-        )}
-
-        {!isLoading && searchResults.length > 0 && (
-          <div className="w-full max-w-2xl p-4 mt-6 bg-white rounded-lg shadow-lg">
-            <h3 className="mb-4 text-xl font-bold text-gray-700">
-              Opciones de viaje
-            </h3>
-            {searchResults.map((result) => (
-              <div
-                key={result.id}
-                className="flex items-center justify-between p-4 mb-4 bg-gray-100 rounded-lg shadow-md"
-              >
-                <div>
-                  <p className="font-bold text-gray-700">
-                    {result.departureTime} → {result.arrivalTime}
-                  </p>
-                  <p className="text-gray-600">Duración: {result.duration}</p>
-                  <p className="text-gray-600">
-                    Asientos disponibles: {result.seatsAvailable}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-gray-700">
-                    Taquilla: {result.priceTaquilla}
-                  </p>
-                  <p className="text-gray-700">
-                    En línea: {result.priceOnline}
-                  </p>
+              <div className="mb-4">
+                <label className="block mb-2 text-gray-700">
+                  ¿Cuándo viajas?
+                </label>
+                <div className="flex flex-wrap gap-4">
                   <button
-                    onClick={() => handleBuy(result.id)}
-                    className="px-4 py-2 mt-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    type="button"
+                    className="flex-1 px-4 py-2 text-center bg-gray-200 rounded-lg"
+                    onClick={() => setDepartureDate(new Date())}
                   >
-                    Comprar
+                    Hoy
                   </button>
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-2 text-center bg-gray-200 rounded-lg"
+                    onClick={() =>
+                      setDepartureDate(new Date(Date.now() + 86400000))
+                    }
+                  >
+                    Mañana
+                  </button>
+                  <DatePicker
+                    selected={departureDate}
+                    onChange={(date) => setDepartureDate(date)}
+                    placeholderText="Elegir fecha"
+                    className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 text-gray-700">
+                  ¿Cuándo regresas? (opcional)
+                </label>
+                <DatePicker
+                  selected={returnDate}
+                  onChange={(date) => setReturnDate(date)}
+                  placeholderText="Elegir fecha"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
+              >
+                Buscar viajes
+              </button>
+            </form>
+
+            <div ref={resultsRef}>
+              {!isLoading && searchResults.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="mb-4 text-xl font-bold text-gray-700">
+                    Opciones de viaje
+                  </h3>
+                  {searchResults.map((result) => (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between p-4 mb-4 bg-gray-100 rounded-lg shadow-md"
+                    >
+                      <div>
+                        <p className="font-bold text-gray-700">
+                          {result.departureTime} → {result.arrivalTime}
+                        </p>
+                        <p className="text-gray-600">
+                          Duración: {result.duration}
+                        </p>
+                        <p className="text-gray-600">
+                          Asientos disponibles: {result.seatsAvailable}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleSelectTrip(result)}
+                        className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                      >
+                        Seleccionar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="mb-6 text-3xl font-bold text-center text-blue-700">
+              Seleccionar Asiento
+            </h2>
+
+            <div className="flex flex-col items-center">
+              <div className="flex items-center justify-center w-full mb-6">
+                <div className="flex items-center justify-center w-16 h-16 text-white bg-gray-700 rounded-full">
+                  <i className="text-2xl fas fa-steering-wheel"></i>
+                </div>
+                <p className="ml-4 font-bold text-gray-700">Conductor</p>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                {Array.from({ length: 10 }).map((_, rowIndex) => (
+                  <div
+                    key={rowIndex}
+                    className="flex items-center justify-center gap-8"
+                  >
+                    <div className="flex gap-4">
+                      {selectedTrip.seats
+                        .slice(rowIndex * 4, rowIndex * 4 + 2)
+                        .map((isOccupied, seatIndex) => (
+                          <button
+                            key={seatIndex}
+                            disabled={isOccupied}
+                            onClick={() =>
+                              handleSelectSeat(rowIndex * 4 + seatIndex)
+                            }
+                            className={`w-12 h-12 rounded-lg ${
+                              isOccupied
+                                ? "bg-red-500 cursor-not-allowed"
+                                : "bg-green-500 hover:bg-green-600"
+                            }`}
+                          >
+                            {rowIndex * 4 + seatIndex + 1}
+                          </button>
+                        ))}
+                    </div>
+
+                    <div className="w-8"></div>
+
+                    <div className="flex gap-4">
+                      {selectedTrip.seats
+                        .slice(rowIndex * 4 + 2, rowIndex * 4 + 4)
+                        .map((isOccupied, seatIndex) => (
+                          <button
+                            key={seatIndex}
+                            disabled={isOccupied}
+                            onClick={() =>
+                              handleSelectSeat(rowIndex * 4 + 2 + seatIndex)
+                            }
+                            className={`w-12 h-12 rounded-lg ${
+                              isOccupied
+                                ? "bg-red-500 cursor-not-allowed"
+                                : "bg-green-500 hover:bg-green-600"
+                            }`}
+                          >
+                            {rowIndex * 4 + 2 + seatIndex + 1}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedSeat !== null && (
+              <>
+                <h3 className="mb-4 text-xl font-bold text-gray-700">
+                  Detalles del Boleto
+                </h3>
+
+                <div className="mb-4">
+                  <p className="text-gray-700">
+                    <strong>Origen:</strong> {origin}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Destino:</strong> {destination}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Fecha de salida:</strong>{" "}
+                    {departureDate?.toLocaleDateString()}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Hora de salida:</strong>{" "}
+                    {selectedTrip?.departureTime}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Hora de llegada:</strong>{" "}
+                    {selectedTrip?.arrivalTime}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>Precio:</strong> {selectedTrip?.priceOnline}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2 text-gray-700">
+                    ¿Quién será el pasajero?
+                  </label>
+                  <select
+                    value={useLoggedInUser ? "loggedInUser" : "custom"}
+                    onChange={(e) =>
+                      setUseLoggedInUser(e.target.value === "loggedInUser")
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="loggedInUser">{loggedInUserName}</option>
+                    <option value="custom">Otro pasajero</option>
+                  </select>
+                </div>
+                {!useLoggedInUser && (
+                  <div className="mb-4">
+                    <label className="block mb-2 text-gray-700">
+                      Nombre del pasajero
+                    </label>
+                    <input
+                      type="text"
+                      value={passengerName}
+                      onChange={(e) => setPassengerName(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      placeholder="Ingresa el nombre del pasajero"
+                    />
+                  </div>
+                )}
+
+                {!cardRegistered ? (
+                  <>
+                    <h3 className="mb-4 text-xl font-bold text-gray-700">
+                      Registrar Tarjeta
+                    </h3>
+                    <form onSubmit={handleRegisterCard}>
+                      <div className="mb-4">
+                        <label className="block mb-2 text-gray-700">
+                          Número de tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardDetails.number}
+                          onChange={handleCardNumberChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          placeholder="Ingresa el número de tarjeta"
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label className="block mb-2 text-gray-700">
+                          Nombre en la tarjeta
+                        </label>
+                        <input
+                          type="text"
+                          value={cardDetails.name}
+                          onChange={(e) =>
+                            setCardDetails({
+                              ...cardDetails,
+                              name: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          placeholder="Ingresa el nombre en la tarjeta"
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label className="block mb-2 text-gray-700">
+                          Fecha de expiración
+                        </label>
+                        <input
+                          type="text"
+                          value={cardDetails.expiry}
+                          onChange={handleExpiryChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          placeholder="MM/AA"
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <label className="block mb-2 text-gray-700">CVV</label>
+                        <input
+                          type="text"
+                          value={cardDetails.cvv}
+                          onChange={handleCVVChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          placeholder="Ingresa el CVV"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
+                      >
+                        Registrar Tarjeta
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="mb-4 text-xl font-bold text-gray-700">
+                      Tarjeta Registrada
+                    </h3>
+                    <div className="mb-4">
+                      <p className="text-gray-700">
+                        <strong>Número:</strong> **** **** ****{" "}
+                        {cardDetails.number.slice(-4)}
+                      </p>
+                      <p className="text-gray-700">
+                        <strong>Nombre:</strong> {cardDetails.name}
+                      </p>
+                      <p className="text-gray-700">
+                        <strong>Expiración:</strong> {cardDetails.expiry}
+                      </p>
+                    </div>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setCardRegistered(false)}
+                        className="flex-1 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700"
+                      >
+                        Remover Tarjeta
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCardDetails({
+                            number: "",
+                            name: "",
+                            expiry: "",
+                            cvv: "",
+                          });
+                          setCardRegistered(false);
+                        }}
+                        className="flex-1 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                      >
+                        Registrar Otra Tarjeta
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  onClick={handleConfirmTicket}
+                  className="w-full py-2 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Confirmar Boleto
+                </button>
+              </>
+            )}
+          </>
         )}
       </main>
 
