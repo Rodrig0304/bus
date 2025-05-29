@@ -15,8 +15,14 @@ export default function Register() {
       return;
     }
 
-    const user = { name, email, password };
-    localStorage.setItem("user", JSON.stringify(user));
+    const newUser = { name, email, password, puntos: 0 };
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    if (users.some((u) => u.email === email)) {
+      alert("El correo ya está registrado.");
+      return;
+    }
+    users.push(newUser);
+    localStorage.setItem("users", JSON.stringify(users));
 
     alert("Cuenta creada con éxito.");
     navigate("/");

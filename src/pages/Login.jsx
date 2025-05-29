@@ -8,15 +8,13 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-
-    //pendieete de revisar Obtener los datos del usuario desde localStorage
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-
-    if (
-      storedUser &&
-      storedUser.email === email &&
-      storedUser.password === password
-    ) {
+    const users = JSON.parse(localStorage.getItem("users")) || [];
+    const user = users.find(
+      (u) => u.email === email && u.password === password
+    );
+    if (user) {
+      // Guardar usuario activo en localStorage
+      localStorage.setItem("activeUser", JSON.stringify(user));
       alert("Inicio de sesión exitoso.");
       navigate("/menu");
     } else {

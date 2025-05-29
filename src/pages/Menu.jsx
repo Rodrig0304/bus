@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useRef, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import logo from "../images/logo.PNG";
@@ -25,6 +25,36 @@ export default function Menu() {
   });
 
   const resultsRef = useRef(null);
+  const navigate = useNavigate();
+
+  const cities = [
+    "Ciudad Mante",
+    "Tampico",
+    "Reynosa",
+    "Nuevo Laredo",
+    "Matamoros",
+    "Ciudad Victoria",
+    "Altamira",
+    "San Fernando",
+    "El Mante",
+    // SLP
+    "San Luis Potosí",
+    "Soledad de Graciano Sánchez",
+    "Matehuala",
+    "Rioverde",
+    "Ciudad Valles",
+    "Tamazunchale",
+    "Ébano",
+    // Monterrey
+    "Monterrey",
+    "San Nicolás de los Garza",
+    "Guadalupe",
+    "Apodaca",
+    "Santa Catarina",
+    "San Pedro Garza García",
+    "Escobedo",
+    "General Escobedo",
+  ];
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -48,7 +78,7 @@ export default function Menu() {
           priceOnline: "$450",
           seats: Array(40)
             .fill(false)
-            .map((_, i) => (i % 5 === 0 ? true : false)), // Simulación de asientos ocupados
+            .map((_, i) => (i % 5 === 0 ? true : false)),
         },
         {
           id: 2,
@@ -60,7 +90,43 @@ export default function Menu() {
           priceOnline: "$500",
           seats: Array(40)
             .fill(false)
-            .map((_, i) => (i % 6 === 0 ? true : false)), // Simulación de asientos ocupados
+            .map((_, i) => (i % 6 === 0 ? true : false)),
+        },
+        {
+          id: 3,
+          departureTime: "12:00 PM",
+          arrivalTime: "04:00 PM",
+          duration: "4h",
+          seatsAvailable: 15,
+          priceTaquilla: "$520",
+          priceOnline: "$470",
+          seats: Array(40)
+            .fill(false)
+            .map((_, i) => (i % 7 === 0 ? true : false)),
+        },
+        {
+          id: 4,
+          departureTime: "02:00 PM",
+          arrivalTime: "06:30 PM",
+          duration: "4h 30m",
+          seatsAvailable: 8,
+          priceTaquilla: "$560",
+          priceOnline: "$510",
+          seats: Array(40)
+            .fill(false)
+            .map((_, i) => (i % 8 === 0 ? true : false)),
+        },
+        {
+          id: 5,
+          departureTime: "04:00 PM",
+          arrivalTime: "08:00 PM",
+          duration: "4h",
+          seatsAvailable: 12,
+          priceTaquilla: "$530",
+          priceOnline: "$480",
+          seats: Array(40)
+            .fill(false)
+            .map((_, i) => (i % 9 === 0 ? true : false)),
         },
       ]);
 
@@ -76,29 +142,35 @@ export default function Menu() {
     setSelectedSeat(seatIndex);
   };
 
+  // Guardar y cargar tarjetas desde localStorage
+  useEffect(() => {
+    const savedCards = JSON.parse(localStorage.getItem("cards")) || [];
+    if (savedCards.length > 0) {
+      setCardRegistered(true);
+      setCardDetails(savedCards[savedCards.length - 1]);
+    }
+  }, []);
+
   const handleRegisterCard = (e) => {
     e.preventDefault();
-
-    // Validar número de tarjeta (16 dígitos)
     const cardNumber = cardDetails.number.replace(/-/g, "");
     if (!/^\d{16}$/.test(cardNumber)) {
       alert("El número de tarjeta debe tener exactamente 16 dígitos.");
       return;
     }
-
-    // Validar fecha de expiración (MM/AA)
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardDetails.expiry)) {
       alert("La fecha de expiración debe estar en el formato MM/AA.");
       return;
     }
-
-    // Validar CVV (3 dígitos)
     if (!/^\d{3}$/.test(cardDetails.cvv)) {
       alert("El CVV debe tener exactamente 3 dígitos.");
       return;
     }
-
     setCardRegistered(true);
+    // Guardar tarjeta en localStorage
+    const cards = JSON.parse(localStorage.getItem("cards")) || [];
+    cards.push(cardDetails);
+    localStorage.setItem("cards", JSON.stringify(cards));
     alert("Tarjeta registrada con éxito.");
   };
 
@@ -136,18 +208,31 @@ export default function Menu() {
       ? loggedInUserName
       : passengerName;
 
+    // Guardar boleto en localStorage
+    const ticket = {
+      origin,
+      destination,
+      date: departureDate?.toISOString().split("T")[0],
+      time: selectedTrip?.departureTime,
+      seat: selectedSeat,
+      passenger: finalPassengerName,
+    };
+    const tickets = JSON.parse(localStorage.getItem("tickets")) || [];
+    tickets.push(ticket);
+    localStorage.setItem("tickets", JSON.stringify(tickets));
+
     alert(
       `Boleto confirmado para ${finalPassengerName} en el asiento ${
         selectedSeat + 1
       }.`
     );
 
-    //no me funciono pendiente de revisarr Limpiar formulario y datos
-    setSelectedTrip(null); // Limpiar el viaje seleccionado
-    setSelectedSeat(null); // Limpiar el asiento seleccionado
-    setPassengerName(""); // Limpiar el nombre del pasajero
-    setCardDetails({ number: "", name: "", expiry: "", cvv: "" }); // Limpiar los detalles de la tarjeta
-    setCardRegistered(false); // Restablecer el estado de la tarjeta
+    setSelectedTrip(null);
+    setSelectedSeat(null);
+    setPassengerName("");
+    setCardDetails({ number: "", name: "", expiry: "", cvv: "" });
+    setCardRegistered(false);
+    navigate("/tickets");
   };
 
   return (
@@ -170,26 +255,35 @@ export default function Menu() {
                 <label className="block mb-2 text-gray-700">
                   ¿De dónde sales?
                 </label>
-                <input
-                  type="text"
+                <select
                   value={origin}
                   onChange={(e) => setOrigin(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Ingresa tu lugar de salida"
-                />
+                >
+                  <option value="">Selecciona ciudad de origen</option>
+                  {cities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
               </div>
-
               <div className="mb-4">
                 <label className="block mb-2 text-gray-700">
                   ¿A dónde viajas?
                 </label>
-                <input
-                  type="text"
+                <select
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Ingresa tu destino"
-                />
+                >
+                  <option value="">Selecciona ciudad de destino</option>
+                  {cities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="mb-4">
